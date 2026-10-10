@@ -1,19 +1,630 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<body>
-    <div class="App">
-        <header class="App-header">
-            <img src="{{ url_for('static', filename='Octocat.png') }}" class="App-logo" alt="logo" />
-            <p>
-                GitHub Codespaces <span class="heart">♥️</span> Flask
-            </p>
-            <p class="small">
-                Edit <code>templates/index.html</code> and refresh to see your changes!
-            </p>
+    <title>Placar das Duplas</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        violet: {
+                            50: '#f0f7f1',
+                            100: '#dcebdd',
+                            300: '#E6E6FA',
+                            500: '#B57EDC',
+                            600: '#496f55',
+                            700: '#385640',
+                            800: '#263d2d'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        /* Imagem de fundo: coloque seu arquivo em static/fundo.jpg */
+        body {
+            background-image:
+                linear-gradient(
+                    rgba(245, 247, 241, 0.78),
+                    rgba(245, 247, 241, 0.88)
+                ),
+                url("{{ url_for('static', filename='Taboo.png') }}");
+
+            background-position: center;
+            background-size: cover;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+
+        .score-input {
+            width: 76px;
+            min-width: 60px;
+        }
+
+        .timer-digits {
+            font-variant-numeric: tabular-nums;
+        }
+
+        input:focus {
+            outline: 2px solid #000000;
+            outline-offset: 1px;
+        }
+
+        @media (max-width: 640px) {
+            .score-input {
+                width: 64px;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen text-gray-800">
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+        <!-- CABEÇALHO E CRONÔMETRO -->
+        <header class="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+
+            <div>
+                <p class="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-grey-600">
+                    Taboo
+                </p>
+
+                <h1 class="text-4xl font-black tracking-tight text-violet-500 sm:text-5xl">
+                    Placar das Duplas
+                </h1>
+
+                <p class="mt-3 text-gray-600">
+                    Organize as rodadas e acompanhe a pontuação.
+                </p>
+            </div>
+
+            <section class="w-full rounded-3xl border border-white bg-white/95 p-6 text-center shadow-xl md:w-80">
+
+                <p class="text-xs font-bold uppercase tracking-widest text-gray-500">
+                    Tempo da rodada
+                </p>
+
+                <div
+                    id="timer"
+                    class="timer-digits my-3 text-6xl font-black text-gray-700"
+                    role="timer"
+                    aria-label="Um minuto restante"
+                >
+                    01:00
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-2">
+
+                    <button
+                        id="startTimer"
+                        type="button"
+                        class="rounded-xl bg-violet-300 px-4 py-2 font-bold text-white transition hover:bg-violet-500"
+                    >
+                        Iniciar
+                    </button>
+
+                    <button
+                        id="pauseTimer"
+                        type="button"
+                        class="rounded-xl bg-gray-100 px-4 py-2 font-bold text-gray-700 transition hover:bg-gray-200"
+                    >
+                        Pausar
+                    </button>
+
+                    <button
+                        id="resetTimer"
+                        type="button"
+                        class="rounded-xl bg-gray-100 px-4 py-2 font-bold text-gray-700 transition hover:bg-gray-200"
+                    >
+                        Reiniciar
+                    </button>
+
+                </div>
+            </section>
+
         </header>
-    </div>
-</body>
 
+        <!-- CONFIGURAÇÕES -->
+        <section class="mb-6 rounded-3xl border border-white bg-white/95 p-5 shadow-lg sm:p-7">
+
+            <h2 class="mb-5 text-2xl font-bold text-forest-800">
+                Configurar jogo
+            </h2>
+
+            <div class="grid gap-5 md:grid-cols-2">
+
+                <div>
+                    <label for="roundCount" class="mb-2 block font-semibold">
+                        Quantidade de rodadas
+                    </label>
+
+                    <div class="flex gap-3">
+                        <input
+                            id="roundCount"
+                            type="number"
+                            min="1"
+                            max="30"
+                            value="5"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3"
+                        >
+
+                        <button
+                            id="createRounds"
+                            type="button"
+                            class="shrink-0 rounded-xl bg-violet-300 px-5 py-3 font-bold text-white transition hover:bg-violet-500"
+                        >
+                            >
+                        </button>
+                    </div>
+
+                    <p class="mt-2 text-sm text-gray-500">
+                        Escolha de 1 a 30 rodadas.
+                    </p>
+                </div>
+
+                <div>
+                    <label for="teamName" class="mb-2 block font-semibold">
+                        Nome da dupla
+                    </label>
+
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                        <input
+                            id="teamName"
+                            type="text"
+                            maxlength="50"
+                            placeholder="Ex.: Dupla Relâmpago"
+                            class="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3"
+                        >
+
+                        <button
+                            id="addTeam"
+                            type="button"
+                            class="rounded-xl bg-violet-300 px-5 py-3 font-bold text-white transition hover:bg-violet-500"
+                        >
+                            + 
+                        </button>
+                    </div>
+
+                    <p class="mt-2 text-sm text-gray-500">
+                        Você pode adicionar quantas duplas precisar.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TABELA DE PONTUAÇÃO -->
+        <section class="rounded-3xl border border-white bg-white/95 p-5 shadow-lg sm:p-7">
+
+            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                <div>
+                    <h2 class="text-2xl font-bold text-forest-800">
+                        Tabela de pontuação
+                    </h2>
+
+                    <p class="mt-1 text-sm text-gray-500">
+                        Preencha os pontos conquistados em cada rodada.
+                    </p>
+                </div>
+
+                <span class="w-fit rounded-full bg-forest-50 px-4 py-2 text-sm font-bold text-forest-700">
+                    Duplas: <span id="teamCount">0</span>
+                </span>
+
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+
+                <table id="scoreTable" class="w-full border-collapse text-left" hidden>
+
+                    <thead id="tableHead" class="bg-forest-50 text-sm text-forest-800">
+                    </thead>
+
+                    <tbody id="tableBody" class="divide-y divide-gray-100">
+                    </tbody>
+
+                    <tfoot id="tableFoot" class="bg-gray-50 font-bold text-forest-800">
+                    </tfoot>
+
+                </table>
+
+                <div
+                    id="emptyMessage"
+                    class="px-5 py-12 text-center text-gray-500"
+                >
+                    <p class="text-lg font-semibold">
+                        Sua tabela aparecerá aqui!
+                    </p>
+
+                    <p class="mt-2 text-sm">
+                        Defina as rodadas e adicione a primeira dupla.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- NOVO JOGO -->
+        <footer class="mt-8 flex justify-end">
+
+            <button
+                id="newGame"
+                type="button"
+                class="rounded-xl bg-red-600 px-6 py-4 font-bold text-white shadow-lg transition hover:bg-red-700"
+            >
+                ↻ Novo jogo
+            </button>
+
+        </footer>
+
+        <p class="mt-5 text-center text-sm text-gray-500">
+            Placar das Duplas · Bom jogo!
+        </p>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // ESTADO DO JOGO
+        // ==========================================
+
+        let rounds = 5;
+        let teams = [];
+        let nextTeamId = 1;
+
+        const roundCountInput = document.getElementById("roundCount");
+        const teamNameInput = document.getElementById("teamName");
+        const scoreTable = document.getElementById("scoreTable");
+        const tableHead = document.getElementById("tableHead");
+        const tableBody = document.getElementById("tableBody");
+        const tableFoot = document.getElementById("tableFoot");
+        const emptyMessage = document.getElementById("emptyMessage");
+        const teamCount = document.getElementById("teamCount");
+
+        // ==========================================
+        // CONFIGURAR QUANTIDADE DE RODADAS
+        // ==========================================
+
+        document.getElementById("createRounds").addEventListener("click", () => {
+            const value = Number(roundCountInput.value);
+
+            if (!Number.isInteger(value) || value < 1 || value > 30) {
+                alert("Informe uma quantidade entre 1 e 30 rodadas.");
+                return;
+            }
+
+            // Mantém as pontuações das rodadas que continuam existindo.
+            rounds = value;
+
+            teams.forEach(team => {
+                team.scores = Array.from(
+                    { length: rounds },
+                    (_, index) => team.scores[index] ?? ""
+                );
+            });
+
+            renderTable();
+        });
+
+        // ==========================================
+        // ADICIONAR DUPLAS
+        // ==========================================
+
+        function addTeam() {
+            const name = teamNameInput.value.trim();
+
+            if (!name) {
+                alert("Digite o nome da dupla.");
+                teamNameInput.focus();
+                return;
+            }
+
+            teams.push({
+                id: nextTeamId++,
+                name: name,
+                scores: Array(rounds).fill("")
+            });
+
+            teamNameInput.value = "";
+            renderTable();
+            teamNameInput.focus();
+        }
+
+        document.getElementById("addTeam").addEventListener("click", addTeam);
+
+        teamNameInput.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                addTeam();
+            }
+        });
+
+        // ==========================================
+        // SOMAR PONTUAÇÕES
+        // ==========================================
+
+        function getTeamTotal(team) {
+            return team.scores.reduce((total, score) => {
+                return total + (score === "" ? 0 : Number(score || 0));
+            }, 0);
+        }
+
+        function getRoundTotal(roundIndex) {
+            return teams.reduce((total, team) => {
+                const score = team.scores[roundIndex];
+
+                return total + (
+                    score === "" || score === undefined
+                        ? 0
+                        : Number(score || 0)
+                );
+            }, 0);
+        }
+
+        // ==========================================
+        // ATUALIZAR TOTAIS SEM RECRIAR A TABELA
+        // ==========================================
+
+        function updateTotals() {
+            teams.forEach(team => {
+                const cell = document.getElementById(`team-total-${team.id}`);
+
+                if (cell) {
+                    cell.textContent = getTeamTotal(team);
+                }
+            });
+
+            for (let r = 0; r < rounds; r++) {
+                const cell = document.getElementById(`round-total-${r}`);
+
+                if (cell) {
+                    cell.textContent = getRoundTotal(r);
+                }
+            }
+
+            const grandTotalCell = document.getElementById("grand-total");
+
+            if (grandTotalCell) {
+                grandTotalCell.textContent = teams.reduce(
+                    (total, team) => total + getTeamTotal(team),
+                    0
+                );
+            }
+        }
+
+        // ==========================================
+        // CRIAR A TABELA DINAMICAMENTE
+        // ==========================================
+
+        function renderTable() {
+            tableHead.innerHTML = "";
+            tableBody.innerHTML = "";
+            tableFoot.innerHTML = "";
+
+            teamCount.textContent = teams.length;
+
+            if (teams.length === 0) {
+                scoreTable.hidden = true;
+                emptyMessage.hidden = false;
+                return;
+            }
+
+            scoreTable.hidden = false;
+            emptyMessage.hidden = true;
+
+            // Cabeçalho
+            const headerRow = document.createElement("tr");
+
+            const teamHeader = document.createElement("th");
+            teamHeader.scope = "col";
+            teamHeader.className = "min-w-36 px-4 py-4";
+            teamHeader.textContent = "Dupla";
+            headerRow.appendChild(teamHeader);
+
+            for (let r = 0; r < rounds; r++) {
+                const th = document.createElement("th");
+                th.scope = "col";
+                th.className = "whitespace-nowrap px-3 py-4 text-center";
+                th.textContent = `Rodada ${r + 1}`;
+                headerRow.appendChild(th);
+            }
+
+            const totalHeader = document.createElement("th");
+            totalHeader.scope = "col";
+            totalHeader.className = "px-4 py-4 text-center";
+            totalHeader.textContent = "Total";
+            headerRow.appendChild(totalHeader);
+
+            tableHead.appendChild(headerRow);
+
+            // Linhas das duplas
+            teams.forEach(team => {
+                const row = document.createElement("tr");
+                row.className = "transition hover:bg-forest-50/60";
+
+                const nameCell = document.createElement("th");
+                nameCell.scope = "row";
+                nameCell.className = "min-w-36 px-4 py-3 font-semibold";
+                nameCell.textContent = team.name;
+                row.appendChild(nameCell);
+
+                for (let r = 0; r < rounds; r++) {
+                    const cell = document.createElement("td");
+                    cell.className = "px-2 py-3 text-center";
+
+                    const input = document.createElement("input");
+                    input.type = "number";
+                    input.min = "0";
+                    input.step = "1";
+                    input.inputMode = "numeric";
+                    input.placeholder = "0";
+                    input.value = team.scores[r] ?? "";
+                    input.className =
+                        "score-input rounded-lg border border-gray-300 bg-white px-2 py-2 text-center";
+
+                    input.setAttribute(
+                        "aria-label",
+                        `${team.name}, rodada ${r + 1}`
+                    );
+
+                    input.addEventListener("input", () => {
+                        if (input.value !== "" && Number(input.value) < 0) {
+                            input.value = "0";
+                        }
+
+                        team.scores[r] = input.value === ""
+                            ? ""
+                            : Math.max(0, Number(input.value));
+
+                        updateTotals();
+                    });
+
+                    cell.appendChild(input);
+                    row.appendChild(cell);
+                }
+
+                const totalCell = document.createElement("td");
+                totalCell.id = `team-total-${team.id}`;
+                totalCell.className =
+                    "px-4 py-3 text-center font-black text-forest-700";
+                totalCell.textContent = getTeamTotal(team);
+                row.appendChild(totalCell);
+
+                tableBody.appendChild(row);
+            });
+
+            // Linha de total por rodada
+            const footerRow = document.createElement("tr");
+
+            const footerLabel = document.createElement("th");
+            footerLabel.className = "whitespace-nowrap px-4 py-4";
+            footerLabel.textContent = "Total da rodada";
+            footerRow.appendChild(footerLabel);
+
+            for (let r = 0; r < rounds; r++) {
+                const cell = document.createElement("td");
+                cell.id = `round-total-${r}`;
+                cell.className = "px-3 py-4 text-center";
+                cell.textContent = getRoundTotal(r);
+                footerRow.appendChild(cell);
+            }
+
+            const grandTotalCell = document.createElement("td");
+            grandTotalCell.id = "grand-total";
+            grandTotalCell.className = "px-4 py-4 text-center";
+            grandTotalCell.textContent = teams.reduce(
+                (total, team) => total + getTeamTotal(team),
+                0
+            );
+            footerRow.appendChild(grandTotalCell);
+
+            tableFoot.appendChild(footerRow);
+            updateTotals();
+        }
+
+        // ==========================================
+        // NOVO JOGO
+        // ==========================================
+
+        document.getElementById("newGame").addEventListener("click", () => {
+            const confirmed = confirm(
+                "Deseja começar um novo jogo? Todas as duplas e pontuações serão apagadas."
+            );
+
+            if (!confirmed) return;
+
+            teams = [];
+            nextTeamId = 1;
+            rounds = 5;
+
+            roundCountInput.value = 5;
+            teamNameInput.value = "";
+
+            renderTable();
+            resetTimer();
+        });
+
+        // ==========================================
+        // CRONÔMETRO DE 60 SEGUNDOS
+        // ==========================================
+
+        let secondsLeft = 60;
+        let timerInterval = null;
+
+        const timerDisplay = document.getElementById("timer");
+
+        function displayTime() {
+            const minutes = Math.floor(secondsLeft / 60);
+            const seconds = secondsLeft % 60;
+
+            timerDisplay.textContent =
+                `${String(minutes).padStart(2, "0")}:` +
+                `${String(seconds).padStart(2, "0")}`;
+
+            timerDisplay.classList.toggle("text-red-600", secondsLeft === 0);
+            timerDisplay.classList.toggle("text-forest-700", secondsLeft > 0);
+            timerDisplay.setAttribute(
+                "aria-label",
+                secondsLeft === 0 ? "Tempo esgotado" : `${secondsLeft} segundos restantes`
+            );
+        }
+
+        function startTimer() {
+            // Evita iniciar intervalos duplicados.
+            if (timerInterval !== null || secondsLeft <= 0) return;
+
+            timerInterval = setInterval(() => {
+                secondsLeft--;
+                displayTime();
+
+                if (secondsLeft <= 0) {
+                    stopTimer();
+                    alert("Tempo esgotado!");
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval !== null) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function pauseTimer() {
+            stopTimer();
+        }
+
+        function resetTimer() {
+            stopTimer();
+            secondsLeft = 60;
+            displayTime();
+        }
+
+        document.getElementById("startTimer")
+            .addEventListener("click", startTimer);
+
+        document.getElementById("pauseTimer")
+            .addEventListener("click", pauseTimer);
+
+        document.getElementById("resetTimer")
+            .addEventListener("click", resetTimer);
+
+        // Inicialização
+        renderTable();
+        displayTime();
+    </script>
+
+</body>
 </html>
